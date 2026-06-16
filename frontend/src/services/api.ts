@@ -5,6 +5,7 @@ import type {
   GeneratedPlan,
   PostulationCall,
   Project,
+  RegionOption,
   Subsidy,
 } from '../types/api'
 
@@ -47,5 +48,7 @@ export const generatePlans = (baseline: EligibilityRequest, scenarios: Array<{ n
   })
 
 export const listProjects = (query: URLSearchParams) => apiFetch<Project[]>(`/projects?${query.toString()}`)
+
+export const listRegions = () => apiFetch<RegionOption[]>('/projects/regions')
 
 export const listCalls = () => apiFetch<PostulationCall[]>('/calls')

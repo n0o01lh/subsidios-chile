@@ -71,6 +71,11 @@ export interface Project {
   source_url: string
 }
 
+export interface RegionOption {
+  id: number
+  name: string
+}
+
 export interface PostulationCall {
   id: number
   subsidy_program: string
