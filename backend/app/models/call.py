@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import Date, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -17,4 +17,7 @@ class PostulationCall(Base):
     available_quotas: Mapped[int] = mapped_column(Integer, default=0)
     requirements: Mapped[str] = mapped_column(String(500))
     source_url: Mapped[str] = mapped_column(String(255))
-    scraped_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    scraped_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+    )

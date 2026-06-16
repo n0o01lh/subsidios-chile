@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, Float, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -20,4 +20,7 @@ class Project(Base):
     bedrooms: Mapped[int] = mapped_column(Integer, default=2)
     address: Mapped[str] = mapped_column(String(255))
     source_url: Mapped[str] = mapped_column(String(255))
-    scraped_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    scraped_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+    )
