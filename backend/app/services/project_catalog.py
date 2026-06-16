@@ -145,41 +145,47 @@ class CatalogRefreshService:
     async def _run_scrapers(
         self, session: AsyncSession, started_at: datetime
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        async def _capture(
-            scraper_name: str,
-            coro: Any,
-        ) -> list[dict[str, Any]]:
+        async def _fetch(coro: Any) -> tuple[list[dict[str, Any]], Exception | None]:
             try:
-                result = await coro
-                await self._record_run(
-                    session,
-                    scraper_name=scraper_name,
-                    records_collected=len(result),
-                    started_at=started_at,
-                    finished_at=datetime.now(UTC),
-                )
-                return result
+                return await coro, None
             except Exception as exc:  # pragma: no cover - network-dependent
+                return [], exc
+
+        # Run all HTTP scraping concurrently (no DB access here)
+        (obs_data, obs_err), (serviu_data, serviu_err), (minvu_data, minvu_err) = (
+            await asyncio.gather(
+                _fetch(self._observatorio.scrape()),
+                _fetch(self._serviu.scrape()),
+                _fetch(self._minvu.scrape()),
+            )
+        )
+
+        # Record results sequentially to avoid concurrent session access
+        for scraper_name, data, err in [
+            ('observatorio_scraper', obs_data, obs_err),
+            ('serviu_scraper', serviu_data, serviu_err),
+            ('minvu_scraper', minvu_data, minvu_err),
+        ]:
+            if err is not None:  # pragma: no cover - network-dependent
                 await self._record_run(
                     session,
                     scraper_name=scraper_name,
                     status='failed',
-                    message=str(exc)[:500],
+                    message=str(err)[:500],
                     records_collected=0,
                     started_at=started_at,
                     finished_at=datetime.now(UTC),
                 )
-                return []
+            else:
+                await self._record_run(
+                    session,
+                    scraper_name=scraper_name,
+                    records_collected=len(data),
+                    started_at=started_at,
+                    finished_at=datetime.now(UTC),
+                )
 
-        observatorio_task = _capture('observatorio_scraper', self._observatorio.scrape())
-        serviu_task = _capture('serviu_scraper', self._serviu.scrape())
-        minvu_task = _capture('minvu_scraper', self._minvu.scrape())
-        scraped_projects, scraped_calls, _ = await asyncio.gather(
-            observatorio_task,
-            serviu_task,
-            minvu_task,
-        )
-        return scraped_projects, scraped_calls
+        return obs_data, serviu_data
 
     def _build_projects(self, scraped_projects: list[dict[str, Any]]) -> list[dict[str, Any]]:
         projects = [*FALLBACK_PROJECTS]

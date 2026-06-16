@@ -1,6 +1,8 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import asyncio
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,13 +22,18 @@ async def run_scheduled_refresh() -> None:
         await refresh_service.refresh(session, force=True)
 
 
+async def _initial_refresh() -> None:
+    async with AsyncSessionLocal() as session:
+        await refresh_service.refresh(session, force=False, max_age_hours=24)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
 
-    async with AsyncSessionLocal() as session:
-        await refresh_service.refresh(session, force=False, max_age_hours=24)
+    # Run initial catalog refresh in the background so startup is not blocked
+    asyncio.create_task(_initial_refresh())
 
     scheduler.add_job(
         run_scheduled_refresh,
