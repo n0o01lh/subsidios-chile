@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import get_session
 from app.schemas.project import ProjectResponse, RegionResponse
 from app.services.project_catalog import ProjectsCatalogService
 
@@ -15,8 +17,17 @@ async def list_projects(
     min_price_uf: float | None = Query(default=None, ge=0),
     max_price_uf: float | None = Query(default=None, ge=0),
     bedrooms: int | None = Query(default=None, ge=1),
+    session: AsyncSession = Depends(get_session),
 ) -> list[ProjectResponse]:
-    return service.list_projects(region, commune, subsidy_program, min_price_uf, max_price_uf, bedrooms)
+    return await service.list_projects(
+        session,
+        region,
+        commune,
+        subsidy_program,
+        min_price_uf,
+        max_price_uf,
+        bedrooms,
+    )
 
 
 @router.get('/regions', response_model=list[RegionResponse])

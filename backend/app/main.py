@@ -1,44 +1,41 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import admin, calls, eligibility, health, plans, projects, subsidies
 from app.core.config import settings
-from app.services.project_catalog import CallsCatalogService, ProjectsCatalogService
-from app.services.scraper_runtime import mark_scraper_run
+from app.core.database import AsyncSessionLocal, Base, engine
+from app.models import call, project, scraper_run, subsidy  # noqa: F401
+from app.services.project_catalog import CatalogRefreshService
 
 scheduler = AsyncIOScheduler(timezone='UTC')
+refresh_service = CatalogRefreshService()
+
+
+async def run_scheduled_refresh() -> None:
+    async with AsyncSessionLocal() as session:
+        await refresh_service.refresh(session, force=True)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+    async with AsyncSessionLocal() as session:
+        await refresh_service.refresh(session, force=False, max_age_hours=24)
+
     scheduler.add_job(
-        lambda: mark_scraper_run('observatorio_scraper'),
-        'interval',
-        hours=24,
-        id='observatorio_scraper',
-        replace_existing=True,
-    )
-    scheduler.add_job(
-        lambda: mark_scraper_run('serviu_scraper'),
+        run_scheduled_refresh,
         'interval',
         hours=12,
-        id='serviu_scraper',
-        replace_existing=True,
-    )
-    scheduler.add_job(
-        lambda: mark_scraper_run('minvu_scraper'),
-        'interval',
-        hours=6,
-        id='minvu_scraper',
+        id='catalog_refresh',
         replace_existing=True,
     )
     scheduler.start()
-
-    if not ProjectsCatalogService().list_projects() and not CallsCatalogService().list_calls():
-        mark_scraper_run('startup_seed')
 
     yield
 

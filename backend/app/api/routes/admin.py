@@ -1,14 +1,15 @@
-from datetime import UTC, datetime
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastapi import APIRouter
-
-from app.services.scraper_runtime import scraper_state
+from app.core.database import get_session
+from app.services.project_catalog import CatalogRefreshService
 
 router = APIRouter(prefix='/admin')
+refresh_service = CatalogRefreshService()
 
 
 @router.post('/refresh')
-async def manual_refresh() -> dict[str, str]:
-    now = datetime.now(UTC)
-    scraper_state['manual_refresh'] = now
-    return {'status': 'refresh_triggered', 'timestamp': now.isoformat()}
+async def manual_refresh(
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, str | int | bool]:
+    return await refresh_service.refresh(session, force=True)

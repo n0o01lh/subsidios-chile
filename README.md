@@ -55,3 +55,8 @@ Subsidios Chile is a full-stack platform that helps citizens evaluate housing su
 - UI text is in Spanish for end users.
 - Code, comments, docs, and variable names are in English.
 - The disclaimer appears in all pages: _"Esta herramienta es orientativa. Siempre consulte con su SERVIU regional."_
+- Scraped projects/calls are persisted in PostgreSQL and refreshed by scheduler/admin endpoint, so the API serves cached data between refresh runs.
+
+## Next iteration
+
+- Deploy the frontend static build to GitHub Pages and point it to the production API URL.

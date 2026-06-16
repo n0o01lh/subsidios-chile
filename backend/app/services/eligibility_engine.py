@@ -5,6 +5,7 @@ from app.services.subsidy_catalog import SUBSIDY_RULES
 class EligibilityEngine:
     def check_eligibility(self, payload: EligibilityRequest) -> EligibilityResponse:
         ranked_results: list[EligibilityResult] = []
+        current_savings = payload.current_savings_uf or 0
 
         for rule in SUBSIDY_RULES:
             gaps: list[str] = []
@@ -14,10 +15,16 @@ class EligibilityEngine:
                 eligible = False
                 gaps.append(f'FRS score must be between {rule.frs_min} and {rule.frs_max}.')
 
-            if payload.current_savings_uf is not None and payload.current_savings_uf < rule.required_savings_uf:
+            if current_savings < rule.required_savings_uf:
                 eligible = False
-                missing_savings = round(rule.required_savings_uf - payload.current_savings_uf, 2)
+                missing_savings = round(rule.required_savings_uf - current_savings, 2)
                 gaps.append(f'Increase savings by {missing_savings} UF.')
+
+            if rule.mortgage_required and payload.monthly_household_income is None:
+                eligible = False
+                gaps.append(
+                    'Mortgage-based programs require monthly household income information.'
+                )
 
             if payload.owns_property and not rule.allows_existing_home:
                 eligible = False
@@ -31,7 +38,7 @@ class EligibilityEngine:
                 eligible = False
                 gaps.append('This subsidy is only available in rural context.')
 
-            score = rule.benefit_uf - (len(gaps) * 20)
+            score = max(rule.benefit_uf - (len(gaps) * 20), 0)
             timeline = 6 + len(gaps) * 2
 
             ranked_results.append(
