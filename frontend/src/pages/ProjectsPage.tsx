@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 
+import { useLocationData } from '../hooks/useLocationData'
 import { listProjects } from '../services/api'
 import type { Project } from '../types/api'
 
@@ -8,6 +9,14 @@ export function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [region, setRegion] = useState('13')
   const [commune, setCommune] = useState('')
+  const { regions, communesByRegionId, loading: locationLoading } = useLocationData()
+
+  const communes = communesByRegionId[Number(region)] ?? []
+
+  const handleRegionChange = (newRegion: string) => {
+    setRegion(newRegion)
+    setCommune('')
+  }
 
   const load = async (search = new URLSearchParams()) => {
     const data = await listProjects(search)
@@ -28,13 +37,39 @@ export function ProjectsPage() {
       <form className="grid gap-3 rounded bg-white p-4 shadow md:grid-cols-3" onSubmit={onSubmit}>
         <label className="flex flex-col gap-1">
           Región
-          <input className="rounded border p-2" type="number" min={1} max={16} value={region} onChange={(event) => setRegion(event.target.value)} />
+          <select
+            className="rounded border p-2"
+            value={region}
+            onChange={(event) => handleRegionChange(event.target.value)}
+            disabled={locationLoading}
+          >
+            {locationLoading && <option value="">Cargando regiones…</option>}
+            {regions.map((r) => (
+              <option key={r.id} value={String(r.id)}>
+                {r.name}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="flex flex-col gap-1">
           Comuna
-          <input className="rounded border p-2" value={commune} onChange={(event) => setCommune(event.target.value)} />
+          <select
+            className="rounded border p-2"
+            value={commune}
+            onChange={(event) => setCommune(event.target.value)}
+            disabled={locationLoading || communes.length === 0}
+          >
+            <option value="">Todas las comunas</option>
+            {communes.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
         </label>
-        <button className="rounded bg-minvuBlue px-4 py-2 text-white">Filtrar</button>
+        <button className="self-end rounded bg-minvuBlue px-4 py-2 text-white" disabled={locationLoading}>
+          Filtrar
+        </button>
       </form>
 
       <div className="grid gap-3 md:grid-cols-2">
