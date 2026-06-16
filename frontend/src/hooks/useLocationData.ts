@@ -21,14 +21,21 @@ interface GistData {
 
 /**
  * Normalises a region name for fuzzy matching:
- * "Región de Arica y Parinacota" → "arica y parinacota"
- * "La Araucanía"                 → "araucanía"
+ * "Región de Arica y Parinacota"      → "arica y parinacota"
+ * "Región Metropolitana de Santiago"  → "metropolitana"
+ * "Región de Los Lagos"               → "los lagos"
  */
 function normalise(name: string): string {
   return name
     .toLowerCase()
-    .replace(/^regi[oó]n\s+(de\s+la?l?\s*|del?\s+)?/i, '')
-    .replace(/^la\s+/, '')
+    // "Región Metropolitana …" is a special case — keep only "metropolitana"
+    .replace(/^regi[oó]n\s+metropolitana(\s+.*)?$/, 'metropolitana')
+    // "Región del X"
+    .replace(/^regi[oó]n\s+del\s+/, '')
+    // "Región de la/los/las/el X"
+    .replace(/^regi[oó]n\s+de\s+(?:la|los|las|el)\s+/, '')
+    // "Región de X"
+    .replace(/^regi[oó]n\s+de\s+/, '')
     .trim()
 }
 

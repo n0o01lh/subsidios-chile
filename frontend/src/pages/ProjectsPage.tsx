@@ -43,12 +43,15 @@ export function ProjectsPage() {
             onChange={(event) => handleRegionChange(event.target.value)}
             disabled={locationLoading}
           >
-            {locationLoading && <option value="">Cargando regiones…</option>}
-            {regions.map((r) => (
-              <option key={r.id} value={String(r.id)}>
-                {r.name}
-              </option>
-            ))}
+            {locationLoading ? (
+              <option value="">Cargando regiones…</option>
+            ) : (
+              regions.map((r) => (
+                <option key={r.id} value={String(r.id)}>
+                  {r.name}
+                </option>
+              ))
+            )}
           </select>
         </label>
         <label className="flex flex-col gap-1">
