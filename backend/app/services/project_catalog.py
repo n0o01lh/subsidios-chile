@@ -12,6 +12,7 @@ from app.models.project import Project
 from app.models.scraper_run import ScraperRun
 from app.schemas.call import PostulationCallResponse
 from app.schemas.project import ProjectResponse, RegionResponse
+from app.scrapers.inmobiliaria_scraper import InmobiliariaScraper, load_inmobiliarias
 from app.scrapers.minvu_scraper import MinvuScraper
 from app.scrapers.observatorio_scraper import ObservatorioScraper
 from app.scrapers.serviu_scraper import ServiuScraper
